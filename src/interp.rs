@@ -4,15 +4,16 @@ use binrw::BinRead;
 
 const MAGIC: u32 = 0x464c45;
 
+#[repr(C)]
 #[derive(BinRead)]
 pub struct ElfHdr {
-    version: u16,
-    entry: u16,
-    phdr_start: u16,
-    num_phdr: u16,
-    symtab: u16,
-    strtab: u16,
-    magic: u32,
+    pub version: u16,
+    pub entry: u16,
+    pub phdr_start: u16,
+    pub num_phdr: u16,
+    pub symtab: u16,
+    pub strtab: u16,
+    pub magic: u32,
 }
 
 pub fn read_header(reader: &mut Cursor<Vec<u8>>) -> Option<ElfHdr> {
