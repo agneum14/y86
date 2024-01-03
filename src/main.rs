@@ -1,11 +1,11 @@
 use clap::{Parser, CommandFactory};
-use interp::{dump_header, read_header};
+use check::{dump_header, read_header};
 use load::{load_segment, read_phdr, ElfPhdr, dump_phdrs, dump_memory};
 use std::{io::Cursor, mem::size_of, process::exit};
 
 use crate::disas::{disassemble_code, disassemble_data, disassemble_rodata};
 
-mod interp;
+mod check;
 mod load;
 mod disas;
 

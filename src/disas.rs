@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::{interp::ElfHdr, load::ElfPhdr};
+use crate::{check::ElfHdr, load::ElfPhdr};
 
 const NUM_REGS: u8 = 15;
 
