@@ -3,8 +3,11 @@ use interp::{dump_header, read_header};
 use load::{load_segment, read_phdr, ElfPhdr, dump_phdrs, dump_memory};
 use std::{io::Cursor, mem::size_of, process::exit};
 
+use crate::disas::{disassemble_code, disassemble_data, disassemble_rodata};
+
 mod interp;
 mod load;
+mod disas;
 
 pub const MEMSIZE: u16 = 1 << 12;
 
@@ -34,6 +37,14 @@ struct Args {
     /// Show the memory contents (full)
     #[arg(short = 'M')]
     mem_full: bool,
+
+    /// Disassemble code contents
+    #[arg(short = 'd')]
+    disas_code: bool,
+
+    /// Disassemble data contents
+    #[arg(short = 'D')]
+    disas_data: bool,
 
     /// Mini-ELF object file
     file: String,
@@ -116,6 +127,28 @@ fn main() {
     if args.mem_brief {
         for phdr in phdrs.iter() {
             dump_memory(&memory, phdr.vaddr as u16, (phdr.vaddr + phdr.size) as u16);
+        }
+    }
+
+    if args.disas_code {
+        println!("Disassembly of executable contents:");
+        for phdr in phdrs.iter() {
+            if phdr.ptype == 1 {
+                disassemble_code(&memory, phdr, &hdr);
+            }
+        }
+    }
+
+    if args.disas_data {
+        println!("Disassembly of data contents:");
+        for phdr in phdrs.iter() {
+            if phdr.ptype == 0 {
+                if phdr.flags == 4 {
+                    disassemble_rodata(&memory, phdr);
+                } else {
+                    disassemble_data(&memory, phdr);
+                }
+            }
         }
     }
 }
