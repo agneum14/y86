@@ -10,7 +10,7 @@ to Rust to avoid violating the Honor Code.
 ## Usage
 
 ```
-Usage: y86 [OPTIONS] <FILE>
+Usage: y86sim [OPTIONS] <FILE>
 
 Arguments:
   <FILE>  Mini-ELF object file

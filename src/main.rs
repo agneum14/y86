@@ -46,6 +46,14 @@ struct Args {
     #[arg(short = 'D')]
     disas_data: bool,
 
+    /// Execute program
+    #[arg(short = 'e')]
+    exec: bool,
+
+    /// Execute program (trace mode)
+    #[arg(short = 'E')]
+    exec_trace: bool,
+
     /// Mini-ELF object file
     file: String,
 }
