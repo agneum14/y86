@@ -2,12 +2,12 @@ use clap::{Parser, CommandFactory};
 use check::{dump_header, read_header};
 use load::{load_segment, read_phdr, ElfPhdr, dump_phdrs, dump_memory};
 use std::{io::Cursor, mem::size_of, process::exit};
-
 use crate::disas::{disassemble_code, disassemble_data, disassemble_rodata};
 
 mod check;
 mod load;
 mod disas;
+mod error;
 
 pub const MEMSIZE: u16 = 1 << 12;
 
@@ -97,8 +97,8 @@ fn main() {
 
     // load the header
     let hdr = match read_header(&mut reader) {
-        Some(v) => v,
-        None => fail(),
+        Ok(v) => v,
+        Err(_) => fail(),
     };
 
     // load the program headers
@@ -106,8 +106,8 @@ fn main() {
     for i in 0..hdr.num_phdr {
         let offset: u16 = hdr.phdr_start + size_of::<ElfPhdr>() as u16 * i;
         let phdr = match read_phdr(&mut reader, offset) {
-            Some(v) => v,
-            None => fail(),
+            Ok(v) => v,
+            Err(_) => fail(),
         };
         phdrs.push(phdr);
     }
@@ -115,7 +115,7 @@ fn main() {
     // load all segments into virtual memory
     let mut memory: Box<[u8]> = Box::new([0; MEMSIZE as usize]);
     for phdr in phdrs.iter() {
-        if !load_segment(&mut reader, &mut memory, phdr) {
+        if load_segment(&mut reader, &mut memory, phdr).is_err() {
             fail();
         }
     }

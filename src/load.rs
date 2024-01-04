@@ -1,6 +1,9 @@
 use std::io::{Cursor, Read};
 
+use anyhow::{ensure, Context, Result};
 use binrw::BinRead;
+
+use crate::error::mem_access;
 
 const MAGIC: u32 = 0xdeadbeef;
 
@@ -15,43 +18,34 @@ pub struct ElfPhdr {
     pub magic: u32,
 }
 
-pub fn read_phdr(reader: &mut Cursor<Vec<u8>>, offset: u16) -> Option<ElfPhdr> {
+pub fn read_phdr(reader: &mut Cursor<Vec<u8>>, offset: u16) -> Result<ElfPhdr> {
     reader.set_position(offset.into());
-    if reader.position() != offset.into() {
-        return None;
-    }
+    ensure!(reader.position() == offset.into());
 
-    let phdr = match ElfPhdr::read_le(reader) {
-        Ok(v) => v,
-        Err(_) => return None,
-    };
+    let phdr = ElfPhdr::read_le(reader)?;
+    ensure!(phdr.magic == MAGIC);
 
-    if phdr.magic != MAGIC {
-        return None;
-    }
-    Some(phdr)
+    Ok(phdr)
 }
 
-pub fn load_segment(reader: &mut Cursor<Vec<u8>>, memory: &mut Box<[u8]>, phdr: &ElfPhdr) -> bool {
+pub fn load_segment(
+    reader: &mut Cursor<Vec<u8>>,
+    memory: &mut Box<[u8]>,
+    phdr: &ElfPhdr,
+) -> Result<()> {
     reader.set_position(phdr.offset as u64);
-    if reader.position() != phdr.offset as u64 {
-        return false;
-    }
+    ensure!(reader.position() == phdr.offset as u64);
 
     let mut buf = vec![0u8; phdr.size as usize];
-    if reader.read_exact(&mut buf).is_err() {
-        return false;
-    }
+    reader.read_exact(&mut buf)?;
 
     for (i, buf_byte) in buf.iter().enumerate() {
-        let mem_byte = match memory.get_mut(phdr.vaddr as usize + i) {
-            Some(v) => v,
-            None => return false,
-        };
+        let addr: usize = phdr.vaddr as usize + i;
+        let mem_byte = memory.get_mut(addr).context(mem_access(addr))?;
         *mem_byte = *buf_byte;
     }
 
-    true
+    Ok(())
 }
 
 pub fn dump_phdrs(phdrs: &Vec<ElfPhdr>) {
@@ -92,7 +86,7 @@ pub fn dump_phdrs(phdrs: &Vec<ElfPhdr>) {
     }
 }
 
-pub fn dump_memory(memory: &Box<[u8]>, start: u16, end: u16) {
+pub fn dump_memory(memory: &Box<[u8]>, start: u16, end: u16) -> Result<()> {
     print!("Contents of memory from {:04x} to {:04x}:", start, end);
 
     // floor address for unaligned memory
@@ -100,7 +94,7 @@ pub fn dump_memory(memory: &Box<[u8]>, start: u16, end: u16) {
 
     let mut i = 0;
     while addr + i < end {
-        let byte = memory.get(i as usize).unwrap();
+        let byte = memory.get(i as usize).context(mem_access(i as usize))?;
 
         if i % 16 == 0 {
             print!("\n  {:04x}  ", addr + i);
@@ -120,4 +114,6 @@ pub fn dump_memory(memory: &Box<[u8]>, start: u16, end: u16) {
         i += 1;
     }
     println!();
+
+    Ok(())
 }

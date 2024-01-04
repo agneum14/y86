@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use binrw::BinRead;
+use anyhow::{Result, ensure};
 
 const MAGIC: u32 = 0x464c45;
 
@@ -16,27 +17,22 @@ pub struct ElfHdr {
     pub magic: u32,
 }
 
-pub fn read_header(reader: &mut Cursor<Vec<u8>>) -> Option<ElfHdr> {
-    let hdr = match ElfHdr::read_le(reader) {
-        Ok(v) => v,
-        Err(_) => return None,
-    };
-
-    if hdr.magic != MAGIC {
-        return None;
-    }
-    Some(hdr)
+pub fn read_header(reader: &mut Cursor<Vec<u8>>) -> Result<ElfHdr> {
+    let hdr = ElfHdr::read_le(reader)?;
+    ensure!(hdr.magic == MAGIC);
+    Ok(hdr)
 }
 
-trait Stringify {
+trait MyToString {
     fn stringify(&self) -> String;
 }
 
-impl Stringify for u16 {
+impl MyToString for u16 {
     fn stringify(&self) -> String {
         format!("{:02x} {:02x}", self & 0x00FF, self >> 8)
     }
 }
+
 pub fn dump_header(hdr: &ElfHdr) {
     println!(
         "{} {} {} {}  {} {} 45 4c 46 00",
